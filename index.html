@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Class Points</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="screen-login" class="screen">
+  <h1>Class Points</h1>
+  <p class="subtitle">Sign in with your email — no password needed.</p>
+  <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
+  <button class="btn-primary" id="login-btn">Send sign-in link</button>
+  <p id="login-confirm" class="hidden">Check your email for a sign-in link.</p>
+  <p id="login-error" class="hidden"></p>
+</div>
+
+<!-- ── CLASSES ── -->
+<div id="screen-classes" class="screen hidden">
+  <div class="topbar">
+    <h1>Class Points</h1>
+    <span id="teacher-name" style="color:var(--muted);font-size:14px"></span>
+    <button class="btn-secondary" id="signout-btn" style="padding:8px 14px;font-size:14px">Sign out</button>
+  </div>
+  <div style="padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h2 style="font-size:20px;font-weight:700">Your Classes</h2>
+      <button class="btn-primary" id="new-class-btn">+ New Class</button>
+    </div>
+    <div class="classes-grid" id="classes-grid">
+      <div style="padding:40px;text-align:center;color:var(--muted)"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CLASS VIEW ── -->
+<div id="screen-class" class="screen hidden">
+  <div class="topbar">
+    <button class="back-btn" id="back-to-classes">←</button>
+    <h1 id="class-title">Class</h1>
+    <div class="nav-actions">
+      <button class="btn-group" id="group-btn">Group</button>
+      <button class="btn-icon" id="settings-btn" title="Settings">⚙️</button>
+      <button class="btn-icon" id="board-btn" title="Open board view">📋</button>
+    </div>
+  </div>
+  <div class="class-body">
+    <div class="pupil-area">
+      <div class="pupil-grid" id="pupil-grid">
+        <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)"><div class="spinner"></div></div>
+      </div>
+    </div>
+    <div class="leaderboard-strip">
+      <h4>Top of class</h4>
+      <div id="leaderboard-list"></div>
+      <div style="margin-top:12px">
+        <a id="board-link" href="#" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none">Open board view ↗</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AWARD SHEET ── -->
+<div id="award-sheet">
+  <h3 id="award-title">Awarding…</h3>
+  <div class="category-grid" id="category-grid"></div>
+  <button class="btn-secondary" id="award-cancel" style="width:100%">Cancel</button>
+</div>
+<div id="award-backdrop" class="hidden" style="position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.3)"></div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<!-- ── SETTINGS PANEL ── -->
+<div id="settings-panel">
+  <div class="topbar">
+    <button class="back-btn" id="settings-close">←</button>
+    <h1>Class Settings</h1>
+  </div>
+
+  <div class="settings-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">Pupils</h3>
+      <button class="btn-primary" id="add-pupil-btn" style="font-size:13px;padding:8px 14px;min-height:unset">+ Add Pupil</button>
+    </div>
+    <div id="pupils-list"></div>
+  </div>
+
+  <div class="settings-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">Behaviour Categories</h3>
+      <button class="btn-primary" id="add-cat-btn" style="font-size:13px;padding:8px 14px;min-height:unset">+ Add</button>
+    </div>
+    <div id="cats-list"></div>
+  </div>
+
+  <div class="settings-section" id="invite-section">
+    <h3>Invite a Colleague</h3>
+    <div class="invite-url-box" id="invite-url">–</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secondary" id="copy-invite-btn">Copy Link</button>
+      <button class="btn-secondary" id="new-invite-btn">New Link</button>
+    </div>
+  </div>
+
+  <div class="settings-section danger-zone">
+    <h3>Danger Zone</h3>
+    <div class="danger-actions">
+      <a id="export-csv-btn" class="btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center">Export CSV</a>
+      <button class="btn-danger" id="archive-class-btn">Archive Class</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODALS ── -->
+<div id="modal-new-class" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>New Class</h3>
+    <label>Class name</label>
+    <input type="text" id="new-class-name" placeholder="e.g. Year 6A">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-new-class')">Cancel</button>
+      <button class="btn-primary" id="create-class-btn">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-add-pupil" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>Add Pupil</h3>
+    <label>First name + initial (e.g. Alex J.)</label>
+    <input type="text" id="new-pupil-name" placeholder="Alex J.">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-add-pupil')">Cancel</button>
+      <button class="btn-primary" id="save-pupil-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-add-cat" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 id="cat-modal-title">Add Category</h3>
+    <input type="hidden" id="edit-cat-id">
+    <label>Icon (emoji)</label>
+    <input type="text" id="new-cat-icon" placeholder="🌟" maxlength="4" style="font-size:24px;width:80px;text-align:center">
+    <label>Label</label>
+    <input type="text" id="new-cat-label" placeholder="Great Work">
+    <label>Points (1–5)</label>
+    <input type="number" id="new-cat-pts" value="1" min="1" max="5">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-add-cat')">Cancel</button>
+      <button class="btn-primary" id="save-cat-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-rename-pupil" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>Rename Pupil</h3>
+    <input type="hidden" id="rename-pupil-id">
+    <input type="text" id="rename-pupil-name" placeholder="Alex J.">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-rename-pupil')">Cancel</button>
+      <button class="btn-primary" id="save-rename-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ── State ──
+let state = {
+  teacher: null,
+  classes: [],
+  currentClass: null,
+  students: [],
+  categories: [],
+  leaderboard: [],
+  groupMode: false,
+  selectedStudents: new Set(),
+  pendingUndoId: null,
+  undoTimer: null,
+};
+
+// ── API helpers ──
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (res.status === 401) { showLogin(); return null; }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error');
+  return data;
+}
+
+// ── Navigation ──
+function showLogin() {
+  show('screen-login');
+  hide('screen-classes');
+  hide('screen-class');
+}
+function showClasses() {
+  show('screen-classes');
+  hide('screen-login');
+  hide('screen-class');
+  loadClasses();
+}
+function showClass(cls) {
+  state.currentClass = cls;
+  state.groupMode = false;
+  state.selectedStudents.clear();
+  document.getElementById('class-title').textContent = cls.name;
+  document.getElementById('board-link').href = `/board.html?class=${cls.id}`;
+  document.getElementById('group-btn').classList.remove('active');
+  show('screen-class');
+  hide('screen-login');
+  hide('screen-classes');
+  loadClassData();
+}
+
+// ── Boot ──
+async function boot() {
+  const urlParams = new URLSearchParams(location.search);
+  if (urlParams.get('error') === 'expired_link') showToast('Sign-in link has expired. Please request a new one.', null, 4000);
+  if (urlParams.get('error') === 'invalid_link') showToast('Invalid sign-in link.', null, 4000);
+
+  const teacher = await api('/auth/me');
+  if (!teacher) { showLogin(); return; }
+  state.teacher = teacher;
+  document.getElementById('teacher-name').textContent = teacher.display_name;
+  showClasses();
+}
+
+// ── Login ──
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) return;
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-btn').disabled = true;
+  try {
+    await api('/auth/magic-link/request', { method: 'POST', body: { email } });
+    document.getElementById('login-confirm').classList.remove('hidden');
+    document.getElementById('login-btn').classList.add('hidden');
+  } catch (e) {
+    document.getElementById('login-error').textContent = e.message;
+    document.getElementById('login-error').classList.remove('hidden');
+    document.getElementById('login-btn').disabled = false;
+  }
+});
+
+document.getElementById('signout-btn').addEventListener('click', async () => {
+  await api('/auth/logout', { method: 'POST' });
+  showLogin();
+});
+
+// ── Classes ──
+async function loadClasses() {
+  const grid = document.getElementById('classes-grid');
+  grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)"><div class="spinner"></div></div>';
+  const classes = await api('/classes');
+  if (!classes) return;
+  state.classes = classes;
+  if (classes.length === 0) {
+    grid.innerHTML = '<p style="color:var(--muted);padding:20px">No classes yet. Create one to get started.</p>';
+    return;
+  }
+  grid.innerHTML = '';
+  classes.forEach(cls => {
+    const tile = document.createElement('div');
+    tile.className = 'class-tile';
+    tile.innerHTML = `
+      ${cls.role !== 'owner' ? `<span class="co-tag">Co-teaching</span>` : ''}
+      <h3>${esc(cls.name)}</h3>
+      <p class="meta">${cls.student_count} pupil${cls.student_count !== 1 ? 's' : ''}</p>
+      <p class="meta">Today: ${cls.today_points || 0} pts</p>
+    `;
+    tile.addEventListener('click', () => showClass(cls));
+    grid.appendChild(tile);
+  });
+}
+
+document.getElementById('new-class-btn').addEventListener('click', () => openModal('modal-new-class'));
+document.getElementById('create-class-btn').addEventListener('click', async () => {
+  const name = document.getElementById('new-class-name').value.trim();
+  if (!name) return;
+  try {
+    await api('/classes', { method: 'POST', body: { name } });
+    closeModal('modal-new-class');
+    document.getElementById('new-class-name').value = '';
+    loadClasses();
+  } catch (e) { showToast('Error: ' + e.message, null, 3000); }
+});
+
+// ── Class data ──
+async function loadClassData() {
+  const classId = state.currentClass.id;
+  const [students, categories, leaderboard] = await Promise.all([
+    api(`/classes/${classId}/students`),
+    api(`/classes/${classId}/categories`),
+    api(`/classes/${classId}/leaderboard`),
+  ]);
+  if (!students) return;
+  state.students = students;
+  state.categories = categories;
+  state.leaderboard = leaderboard;
+  renderPupilGrid();
+  renderLeaderboard();
+}
+
+function renderPupilGrid() {
+  const grid = document.getElementById('pupil-grid');
+  grid.innerHTML = '';
+  state.students.forEach(s => {
+    const tile = document.createElement('div');
+    tile.className = 'pupil-tile' + (state.selectedStudents.has(s.id) ? ' selected' : '');
+    tile.dataset.id = s.id;
+    tile.innerHTML = `
+      ${state.groupMode && state.selectedStudents.has(s.id) ? '<div class="check">✓</div>' : ''}
+      <div class="pupil-name">${esc(s.display_name)}</div>
+      <div class="pupil-pts">${s.total_points}</div>
+    `;
+    tile.addEventListener('click', () => onPupilTap(s));
+    grid.appendChild(tile);
+  });
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById('leaderboard-list');
+  list.innerHTML = '';
+  const medals = ['🥇', '🥈', '🥉'];
+  state.leaderboard.slice(0, 8).forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.innerHTML = `
+      <span class="lb-rank">${medals[i] || (i + 1)}</span>
+      <span class="lb-name">${esc(p.display_name)}</span>
+      <span class="lb-pts">${p.total}</span>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ── Award flow ──
+function onPupilTap(student) {
+  if (state.groupMode) {
+    if (state.selectedStudents.has(student.id)) {
+      state.selectedStudents.delete(student.id);
+    } else {
+      state.selectedStudents.add(student.id);
+    }
+    renderPupilGrid();
+    if (state.selectedStudents.size > 0) openAwardSheet();
+    else closeAwardSheet();
+    return;
+  }
+  state.selectedStudents.clear();
+  state.selectedStudents.add(student.id);
+  openAwardSheet();
+}
+
+document.getElementById('group-btn').addEventListener('click', () => {
+  state.groupMode = !state.groupMode;
+  state.selectedStudents.clear();
+  document.getElementById('group-btn').classList.toggle('active', state.groupMode);
+  renderPupilGrid();
+  closeAwardSheet();
+});
+
+function openAwardSheet() {
+  const sheet = document.getElementById('award-sheet');
+  const backdrop = document.getElementById('award-backdrop');
+  const title = document.getElementById('award-title');
+
+  if (state.groupMode) {
+    title.textContent = `Awarding ${state.selectedStudents.size} pupil${state.selectedStudents.size !== 1 ? 's' : ''}`;
+  } else {
+    const s = state.students.find(s => state.selectedStudents.has(s.id));
+    title.textContent = `Awarding: ${s ? esc(s.display_name) : ''}`;
+  }
+
+  const grid = document.getElementById('category-grid');
+  grid.innerHTML = '';
+  state.categories.forEach(cat => {
+    const chip = document.createElement('button');
+    chip.className = 'cat-chip';
+    chip.innerHTML = `
+      <span class="cat-icon">${cat.icon || '⭐'}</span>
+      <span class="cat-label">${esc(cat.label)}</span>
+      <span class="cat-pts">+${cat.points} pt${cat.points !== 1 ? 's' : ''}</span>
+    `;
+    chip.addEventListener('click', () => awardPoints(cat));
+    grid.appendChild(chip);
+  });
+
+  sheet.classList.add('open');
+  backdrop.classList.remove('hidden');
+}
+
+function closeAwardSheet() {
+  document.getElementById('award-sheet').classList.remove('open');
+  document.getElementById('award-backdrop').classList.add('hidden');
+}
+
+document.getElementById('award-cancel').addEventListener('click', () => {
+  closeAwardSheet();
+  state.selectedStudents.clear();
+  if (state.groupMode) renderPupilGrid();
+});
+document.getElementById('award-backdrop').addEventListener('click', () => {
+  closeAwardSheet();
+  state.selectedStudents.clear();
+  if (state.groupMode) renderPupilGrid();
+});
+
+async function awardPoints(category) {
+  closeAwardSheet();
+  const classId = state.currentClass.id;
+  let result;
+
+  try {
+    if (state.groupMode && state.selectedStudents.size > 1) {
+      result = await api(`/classes/${classId}/points/group`, {
+        method: 'POST',
+        body: { student_ids: [...state.selectedStudents], category_id: category.id },
+      });
+      showToast(`${category.icon || '⭐'} ${category.label} → ${result.count} pupils (+${category.points}pt)`, result.group_event_id);
+    } else {
+      const studentId = [...state.selectedStudents][0];
+      result = await api(`/classes/${classId}/points`, {
+        method: 'POST',
+        body: { student_id: studentId, category_id: category.id },
+      });
+      const student = state.students.find(s => s.id === studentId);
+      showToast(`✓ ${student?.display_name} · ${category.label} · +${category.points}pt`, result.id);
+    }
+
+    state.selectedStudents.clear();
+    if (state.groupMode) { state.groupMode = false; document.getElementById('group-btn').classList.remove('active'); }
+    await loadClassData();
+  } catch (e) {
+    showToast('Error: ' + e.message, null, 3000);
+  }
+}
+
+// ── Toast + Undo ──
+function showToast(msg, eventId, duration = 8000) {
+  const toast = document.getElementById('toast');
+  if (state.undoTimer) { clearTimeout(state.undoTimer); }
+
+  toast.innerHTML = `<span>${msg}</span>`;
+  if (eventId) {
+    state.pendingUndoId = eventId;
+    const undoBtn = document.createElement('button');
+    undoBtn.textContent = 'Undo';
+    undoBtn.addEventListener('click', undoLast);
+    toast.appendChild(undoBtn);
+  }
+
+  toast.classList.add('show');
+  state.undoTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+async function undoLast() {
+  const classId = state.currentClass.id;
+  const eventId = state.pendingUndoId;
+  if (!eventId) return;
+  document.getElementById('toast').classList.remove('show');
+  try {
+    await api(`/classes/${classId}/points/${eventId}`, { method: 'DELETE' });
+    await loadClassData();
+  } catch (e) {
+    showToast('Could not undo: ' + e.message, null, 3000);
+  }
+}
+
+// ── Settings ──
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('settings-close').addEventListener('click', () => {
+  document.getElementById('settings-panel').classList.remove('open');
+  loadClassData();
+});
+
+async function openSettings() {
+  document.getElementById('settings-panel').classList.add('open');
+  renderSettingsPupils();
+  renderSettingsCats();
+  loadInviteLink();
+  const classId = state.currentClass.id;
+  document.getElementById('export-csv-btn').href = `/api/classes/${classId}/export/csv`;
+}
+
+function renderSettingsPupils() {
+  const list = document.getElementById('pupils-list');
+  list.innerHTML = '';
+  state.students.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.innerHTML = `
+      <span class="list-item-name">${esc(s.display_name)}</span>
+      <div class="list-item-actions">
+        <button class="btn-secondary" data-id="${s.id}" data-name="${esc(s.display_name)}">Rename</button>
+        <button class="btn-danger" data-id="${s.id}">Remove</button>
+      </div>
+    `;
+    item.querySelector('.btn-secondary').addEventListener('click', (e) => {
+      document.getElementById('rename-pupil-id').value = e.target.dataset.id;
+      document.getElementById('rename-pupil-name').value = e.target.dataset.name;
+      openModal('modal-rename-pupil');
+    });
+    item.querySelector('.btn-danger').addEventListener('click', async (e) => {
+      if (!confirm(`Remove ${s.display_name}? This also deletes their points history.`)) return;
+      await api(`/classes/${state.currentClass.id}/students/${e.target.dataset.id}`, { method: 'DELETE' });
+      state.students = state.students.filter(st => st.id !== e.target.dataset.id);
+      renderSettingsPupils();
+    });
+    list.appendChild(item);
+  });
+}
+
+function renderSettingsCats() {
+  const list = document.getElementById('cats-list');
+  list.innerHTML = '';
+  state.categories.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.innerHTML = `
+      <span class="list-item-name">${c.icon || ''} ${esc(c.label)} &nbsp;<small style="color:var(--muted)">+${c.points}pt</small></span>
+      <div class="list-item-actions">
+        <button class="btn-secondary" data-id="${c.id}">Edit</button>
+        <button class="btn-danger" data-id="${c.id}">Delete</button>
+      </div>
+    `;
+    item.querySelector('.btn-secondary').addEventListener('click', () => {
+      document.getElementById('cat-modal-title').textContent = 'Edit Category';
+      document.getElementById('edit-cat-id').value = c.id;
+      document.getElementById('new-cat-icon').value = c.icon || '';
+      document.getElementById('new-cat-label').value = c.label;
+      document.getElementById('new-cat-pts').value = c.points;
+      openModal('modal-add-cat');
+    });
+    item.querySelector('.btn-danger').addEventListener('click', async (e) => {
+      try {
+        await api(`/classes/${state.currentClass.id}/categories/${e.target.dataset.id}`, { method: 'DELETE' });
+        state.categories = state.categories.filter(cat => cat.id !== e.target.dataset.id);
+        renderSettingsCats();
+      } catch (err) { showToast(err.message, null, 3000); }
+    });
+    list.appendChild(item);
+  });
+}
+
+async function loadInviteLink() {
+  // Only generate a new link on demand; show placeholder for now
+  document.getElementById('invite-url').textContent = 'Click "New Link" to generate an invite.';
+}
+
+document.getElementById('new-invite-btn').addEventListener('click', async () => {
+  try {
+    const { url } = await api(`/classes/${state.currentClass.id}/invites`, { method: 'POST' });
+    document.getElementById('invite-url').textContent = url;
+  } catch (e) { showToast(e.message, null, 3000); }
+});
+
+document.getElementById('copy-invite-btn').addEventListener('click', () => {
+  const url = document.getElementById('invite-url').textContent;
+  if (url.startsWith('Click')) return;
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied!', null, 2000));
+});
+
+document.getElementById('archive-class-btn').addEventListener('click', async () => {
+  if (!confirm(`Archive ${state.currentClass.name}? It will be hidden from your dashboard.`)) return;
+  await api(`/classes/${state.currentClass.id}`, {
+    method: 'PATCH',
+    body: { archived_at: Math.floor(Date.now() / 1000) },
+  });
+  document.getElementById('settings-panel').classList.remove('open');
+  showClasses();
+});
+
+// ── Modal listeners ──
+document.getElementById('add-pupil-btn').addEventListener('click', () => {
+  document.getElementById('new-pupil-name').value = '';
+  openModal('modal-add-pupil');
+});
+document.getElementById('save-pupil-btn').addEventListener('click', async () => {
+  const name = document.getElementById('new-pupil-name').value.trim();
+  if (!name) return;
+  try {
+    const student = await api(`/classes/${state.currentClass.id}/students`, { method: 'POST', body: { display_name: name } });
+    state.students.push(student);
+    closeModal('modal-add-pupil');
+    document.getElementById('new-pupil-name').value = '';
+    renderSettingsPupils();
+  } catch (e) { showToast(e.message, null, 3000); }
+});
+
+document.getElementById('add-cat-btn').addEventListener('click', () => {
+  document.getElementById('cat-modal-title').textContent = 'Add Category';
+  document.getElementById('edit-cat-id').value = '';
+  document.getElementById('new-cat-icon').value = '';
+  document.getElementById('new-cat-label').value = '';
+  document.getElementById('new-cat-pts').value = '1';
+  openModal('modal-add-cat');
+});
+document.getElementById('save-cat-btn').addEventListener('click', async () => {
+  const id = document.getElementById('edit-cat-id').value;
+  const icon = document.getElementById('new-cat-icon').value.trim();
+  const label = document.getElementById('new-cat-label').value.trim();
+  const points = parseInt(document.getElementById('new-cat-pts').value) || 1;
+  if (!label) return;
+  const classId = state.currentClass.id;
+  try {
+    if (id) {
+      const cat = await api(`/classes/${classId}/categories/${id}`, { method: 'PATCH', body: { icon, label, points } });
+      state.categories = state.categories.map(c => c.id === id ? cat : c);
+    } else {
+      const cat = await api(`/classes/${classId}/categories`, { method: 'POST', body: { icon, label, points } });
+      state.categories.push(cat);
+    }
+    closeModal('modal-add-cat');
+    renderSettingsCats();
+  } catch (e) { showToast(e.message, null, 3000); }
+});
+
+document.getElementById('save-rename-btn').addEventListener('click', async () => {
+  const id = document.getElementById('rename-pupil-id').value;
+  const name = document.getElementById('rename-pupil-name').value.trim();
+  if (!name || !id) return;
+  try {
+    const student = await api(`/classes/${state.currentClass.id}/students/${id}`, { method: 'PATCH', body: { display_name: name } });
+    state.students = state.students.map(s => s.id === id ? { ...s, display_name: student.display_name } : s);
+    closeModal('modal-rename-pupil');
+    renderSettingsPupils();
+  } catch (e) { showToast(e.message, null, 3000); }
+});
+
+// ── Nav ──
+document.getElementById('back-to-classes').addEventListener('click', () => {
+  closeAwardSheet();
+  document.getElementById('settings-panel').classList.remove('open');
+  showClasses();
+});
+document.getElementById('board-btn').addEventListener('click', () => {
+  window.open(`/board.html?class=${state.currentClass.id}`, '_blank');
+});
+
+// ── Utilities ──
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+window.closeModal = closeModal;
+
+// ── Start ──
+boot();
+</script>
+</body>
+</html>

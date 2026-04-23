@@ -1,0 +1,7 @@
+name = "class-points"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "class-points-db"
+database_id = "REPLACE_WITH_DATABASE_ID"
