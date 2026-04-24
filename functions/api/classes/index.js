@@ -1,7 +1,7 @@
 const DEFAULT_CATEGORIES = [
   { label: 'Great Work', points: 1, icon: '🌟' },
   { label: 'Kindness', points: 1, icon: '💛' },
-  { label: 'Creativity', points: 2, icon: '🎨' },
+  { label: 'Creativity', points: 1, icon: '🎨' },
   { label: 'Leadership', points: 1, icon: '🏅' },
   { label: 'Teamwork', points: 1, icon: '🤝' },
   { label: 'Homework Done', points: 1, icon: '📚' },
