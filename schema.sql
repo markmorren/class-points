@@ -1,10 +1,9 @@
-PRAGMA journal_mode = WAL;
-
 CREATE TABLE teachers (
-  id           TEXT PRIMARY KEY,
-  email        TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  created_at   INTEGER NOT NULL
+  id            TEXT PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE,
+  display_name  TEXT NOT NULL,
+  created_at    INTEGER NOT NULL,
+  password_hash TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE classes (
@@ -78,14 +77,6 @@ CREATE TABLE invites (
   expires_at          INTEGER NOT NULL,
   used_by_teacher_id  TEXT REFERENCES teachers(id)
 );
-
-CREATE TABLE magic_links (
-  token      TEXT PRIMARY KEY,
-  email      TEXT NOT NULL,
-  expires_at INTEGER NOT NULL,
-  used_at    INTEGER
-);
-CREATE INDEX idx_magic_links_email ON magic_links(email);
 
 CREATE TABLE sessions (
   id             TEXT PRIMARY KEY,

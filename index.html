@@ -5,17 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Class Points</title>
   <link rel="stylesheet" href="/style.css">
+  <style>
+    .auth-switch { margin-top: 12px; font-size: 14px; color: var(--muted); text-align: center; }
+    .auth-switch a { color: var(--accent); text-decoration: none; }
+  </style>
 </head>
 <body>
 
 <!-- ── LOGIN ── -->
 <div id="screen-login" class="screen">
   <h1>Class Points</h1>
-  <p class="subtitle">Sign in with your email — no password needed.</p>
-  <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
-  <button class="btn-primary" id="login-btn">Send sign-in link</button>
-  <p id="login-confirm" class="hidden">Check your email for a sign-in link.</p>
-  <p id="login-error" class="hidden"></p>
+
+  <!-- Sign-in sub-view -->
+  <div id="view-signin">
+    <p class="subtitle">Sign in to your account.</p>
+    <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
+    <input type="password" id="login-password" placeholder="Password">
+    <button class="btn-primary" id="login-btn">Sign in</button>
+    <p class="auth-switch">First time? <a href="#" id="show-register">Create an account</a></p>
+    <p id="login-error" class="hidden"></p>
+  </div>
+
+  <!-- Register sub-view -->
+  <div id="view-register" class="hidden">
+    <p class="subtitle">Create your account.</p>
+    <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
+    <input type="text" id="reg-name" placeholder="e.g. Ms Smith" autocomplete="name">
+    <input type="password" id="reg-password" placeholder="Password (min 8 characters)">
+    <input type="password" id="reg-confirm" placeholder="Confirm password">
+    <button class="btn-primary" id="reg-btn">Create account</button>
+    <p class="auth-switch">Already have an account? <a href="#" id="show-signin">Sign in</a></p>
+    <p id="reg-error" class="hidden"></p>
+  </div>
 </div>
 
 <!-- ── CLASSES ── -->
@@ -249,10 +270,6 @@ function showClass(cls) {
 
 // ── Boot ──
 async function boot() {
-  const urlParams = new URLSearchParams(location.search);
-  if (urlParams.get('error') === 'expired_link') showToast('Sign-in link has expired. Please request a new one.', null, 4000);
-  if (urlParams.get('error') === 'invalid_link') showToast('Invalid sign-in link.', null, 4000);
-
   const teacher = await api('/auth/me');
   if (!teacher) { showLogin(); return; }
   state.teacher = teacher;
@@ -261,19 +278,63 @@ async function boot() {
 }
 
 // ── Login ──
+// toggle between sign-in and register sub-views
+document.getElementById('show-register').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('view-signin').classList.add('hidden');
+  document.getElementById('view-register').classList.remove('hidden');
+});
+document.getElementById('show-signin').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('view-register').classList.add('hidden');
+  document.getElementById('view-signin').classList.remove('hidden');
+});
+
+// sign in
 document.getElementById('login-btn').addEventListener('click', async () => {
   const email = document.getElementById('login-email').value.trim();
-  if (!email) return;
-  document.getElementById('login-error').classList.add('hidden');
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  if (!email || !password) return;
   document.getElementById('login-btn').disabled = true;
   try {
-    await api('/auth/magic-link/request', { method: 'POST', body: { email } });
-    document.getElementById('login-confirm').classList.remove('hidden');
-    document.getElementById('login-btn').classList.add('hidden');
+    await api('/auth/login', { method: 'POST', body: { email, password } });
+    await boot();
   } catch (e) {
-    document.getElementById('login-error').textContent = e.message;
-    document.getElementById('login-error').classList.remove('hidden');
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
     document.getElementById('login-btn').disabled = false;
+  }
+});
+
+// register
+document.getElementById('reg-btn').addEventListener('click', async () => {
+  const email = document.getElementById('reg-email').value.trim();
+  const display_name = document.getElementById('reg-name').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const confirm = document.getElementById('reg-confirm').value;
+  const errEl = document.getElementById('reg-error');
+  errEl.classList.add('hidden');
+  if (!email || !display_name || !password) return;
+  if (password !== confirm) {
+    errEl.textContent = 'Passwords do not match.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password.length < 8) {
+    errEl.textContent = 'Password must be at least 8 characters.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  document.getElementById('reg-btn').disabled = true;
+  try {
+    await api('/auth/register', { method: 'POST', body: { email, display_name, password } });
+    await boot();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+    document.getElementById('reg-btn').disabled = false;
   }
 });
 

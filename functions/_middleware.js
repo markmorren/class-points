@@ -7,8 +7,8 @@ export async function onRequest(context) {
   }
 
   const publicPaths = [
-    '/api/auth/magic-link/request',
-    '/api/auth/magic-link/verify',
+    '/api/auth/login',
+    '/api/auth/register',
   ];
   if (publicPaths.some(p => url.pathname.startsWith(p))) {
     return next();
