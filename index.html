@@ -71,6 +71,12 @@
 </div>
 <div id="award-backdrop" class="hidden" style="position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.3)"></div>
 
+<!-- ── GROUP ACTION BAR ── -->
+<div id="group-action-bar" class="hidden" style="position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--accent);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <span id="group-action-label" style="color:#fff;font-weight:600;font-size:15px"></span>
+  <button id="group-award-btn" style="background:#fff;color:var(--accent);font-weight:700;padding:10px 20px;min-height:unset;border-radius:10px;border:none;font-size:14px;cursor:pointer">Award points →</button>
+</div>
+
 <!-- ── TOAST ── -->
 <div id="toast"></div>
 
@@ -84,7 +90,10 @@
   <div class="settings-section">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <h3 style="margin:0">Pupils</h3>
-      <button class="btn-primary" id="add-pupil-btn" style="font-size:13px;padding:8px 14px;min-height:unset">+ Add Pupil</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" id="bulk-import-open-btn" style="font-size:13px;padding:8px 14px;min-height:unset">↑ Import CSV</button>
+        <button class="btn-primary" id="add-pupil-btn" style="font-size:13px;padding:8px 14px;min-height:unset">+ Add Pupil</button>
+      </div>
     </div>
     <div id="pupils-list"></div>
   </div>
@@ -165,6 +174,22 @@
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('modal-rename-pupil')">Cancel</button>
       <button class="btn-primary" id="save-rename-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-bulk-import" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>Import Pupils</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">One name per line. Upload a CSV (e.g. exported from Excel) or paste below.</p>
+    <label>Upload CSV file</label>
+    <input type="file" id="bulk-file" accept=".csv,.txt" style="display:block;margin-bottom:14px;font-size:13px;color:var(--muted)">
+    <label>Or paste names (one per line)</label>
+    <textarea id="bulk-paste" rows="7" placeholder="Alex J.&#10;Beth K.&#10;Charlie L." style="width:100%;padding:10px 12px;font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:10px;resize:vertical;outline:none;margin-top:4px;margin-bottom:8px;display:block"></textarea>
+    <p id="bulk-preview-count" style="font-size:13px;color:var(--accent);min-height:20px;margin-bottom:12px"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-bulk-import')">Cancel</button>
+      <button class="btn-primary" id="bulk-import-btn" disabled>Import</button>
     </div>
   </div>
 </div>
@@ -353,8 +378,7 @@ function onPupilTap(student) {
       state.selectedStudents.add(student.id);
     }
     renderPupilGrid();
-    if (state.selectedStudents.size > 0) openAwardSheet();
-    else closeAwardSheet();
+    updateGroupBar();
     return;
   }
   state.selectedStudents.clear();
@@ -368,7 +392,10 @@ document.getElementById('group-btn').addEventListener('click', () => {
   document.getElementById('group-btn').classList.toggle('active', state.groupMode);
   renderPupilGrid();
   closeAwardSheet();
+  updateGroupBar();
 });
+
+document.getElementById('group-award-btn').addEventListener('click', openAwardSheet);
 
 function openAwardSheet() {
   const sheet = document.getElementById('award-sheet');
@@ -409,11 +436,13 @@ document.getElementById('award-cancel').addEventListener('click', () => {
   closeAwardSheet();
   state.selectedStudents.clear();
   if (state.groupMode) renderPupilGrid();
+  updateGroupBar();
 });
 document.getElementById('award-backdrop').addEventListener('click', () => {
   closeAwardSheet();
   state.selectedStudents.clear();
   if (state.groupMode) renderPupilGrid();
+  updateGroupBar();
 });
 
 async function awardPoints(category) {
@@ -440,6 +469,7 @@ async function awardPoints(category) {
 
     state.selectedStudents.clear();
     if (state.groupMode) { state.groupMode = false; document.getElementById('group-btn').classList.remove('active'); }
+    updateGroupBar();
     await loadClassData();
   } catch (e) {
     showToast('Error: ' + e.message, null, 3000);
@@ -641,6 +671,10 @@ document.getElementById('save-rename-btn').addEventListener('click', async () =>
 // ── Nav ──
 document.getElementById('back-to-classes').addEventListener('click', () => {
   closeAwardSheet();
+  state.groupMode = false;
+  state.selectedStudents.clear();
+  document.getElementById('group-btn').classList.remove('active');
+  updateGroupBar();
   document.getElementById('settings-panel').classList.remove('open');
   showClasses();
 });
@@ -657,6 +691,81 @@ function hide(id) { document.getElementById(id).classList.add('hidden'); }
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 window.closeModal = closeModal;
+
+// ── Group action bar ──
+function updateGroupBar() {
+  const bar = document.getElementById('group-action-bar');
+  const n = state.selectedStudents.size;
+  if (state.groupMode && n > 0) {
+    document.getElementById('group-action-label').textContent = `${n} pupil${n !== 1 ? 's' : ''} selected`;
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+// ── Bulk Import ──
+document.getElementById('bulk-import-open-btn').addEventListener('click', () => {
+  document.getElementById('bulk-paste').value = '';
+  document.getElementById('bulk-file').value = '';
+  document.getElementById('bulk-preview-count').textContent = '';
+  const btn = document.getElementById('bulk-import-btn');
+  btn.disabled = true;
+  btn.textContent = 'Import';
+  openModal('modal-bulk-import');
+});
+
+document.getElementById('bulk-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  document.getElementById('bulk-paste').value = parseBulkText(text).join('\n');
+  updateBulkPreview();
+});
+
+document.getElementById('bulk-paste').addEventListener('input', updateBulkPreview);
+
+function parseBulkText(text) {
+  return text.split(/\r?\n/)
+    .map(line => line.split(',')[0].replace(/^"|"$/g, '').trim())
+    .filter(Boolean);
+}
+
+function updateBulkPreview() {
+  const names = parseBulkText(document.getElementById('bulk-paste').value);
+  const n = names.length;
+  const btn = document.getElementById('bulk-import-btn');
+  document.getElementById('bulk-preview-count').textContent = n > 0 ? `${n} pupil${n !== 1 ? 's' : ''} ready to import` : '';
+  btn.disabled = n === 0;
+  btn.textContent = n > 0 ? `Import ${n} Pupil${n !== 1 ? 's' : ''}` : 'Import';
+}
+
+document.getElementById('bulk-import-btn').addEventListener('click', async () => {
+  const names = parseBulkText(document.getElementById('bulk-paste').value);
+  if (!names.length) return;
+  const btn = document.getElementById('bulk-import-btn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  try {
+    const result = await api(`/classes/${state.currentClass.id}/students/bulk`, {
+      method: 'POST',
+      body: { names },
+    });
+    closeModal('modal-bulk-import');
+    const c = result.created.length;
+    const s = result.skipped.length;
+    const msg = s > 0
+      ? `Added ${c} pupil${c !== 1 ? 's' : ''} · ${s} skipped (already exist)`
+      : `Added ${c} pupil${c !== 1 ? 's' : ''}`;
+    showToast(msg, null, 4000);
+    const students = await api(`/classes/${state.currentClass.id}/students`);
+    if (students) { state.students = students; renderSettingsPupils(); }
+  } catch (e) {
+    btn.disabled = false;
+    updateBulkPreview();
+    showToast('Error: ' + e.message, null, 3000);
+  }
+});
 
 // ── Start ──
 boot();
