@@ -181,7 +181,7 @@
 <div id="modal-bulk-import" class="modal-backdrop hidden">
   <div class="modal">
     <h3>Import Pupils</h3>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">One name per line. Upload a CSV (e.g. exported from Excel) or paste below.</p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">One name per line. <a id="bulk-template-btn" href="#" style="color:var(--accent)">Download template</a> — fill it in and upload below.</p>
     <label>Upload CSV file</label>
     <input type="file" id="bulk-file" accept=".csv,.txt" style="display:block;margin-bottom:14px;font-size:13px;color:var(--muted)">
     <label>Or paste names (one per line)</label>
@@ -713,6 +713,16 @@ document.getElementById('bulk-import-open-btn').addEventListener('click', () => 
   btn.disabled = true;
   btn.textContent = 'Import';
   openModal('modal-bulk-import');
+});
+
+document.getElementById('bulk-template-btn').addEventListener('click', (e) => {
+  e.preventDefault();
+  const csv = 'Alex J.\nBeth K.\nCharlie L.\n';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'class-pupils-template.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 });
 
 document.getElementById('bulk-file').addEventListener('change', async (e) => {
