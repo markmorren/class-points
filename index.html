@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Class Points</title>
   <link rel="stylesheet" href="/style.css">
-  <style>
-    .auth-switch { margin-top: 12px; font-size: 14px; color: var(--muted); text-align: center; }
-    .auth-switch a { color: var(--accent); text-decoration: none; }
-  </style>
 </head>
 <body>
 
@@ -16,26 +12,28 @@
 <div id="screen-login" class="screen">
   <h1>Class Points</h1>
 
-  <!-- Sign-in sub-view -->
-  <div id="view-signin">
-    <p class="subtitle">Sign in to your account.</p>
-    <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
-    <input type="password" id="login-password" placeholder="Password">
-    <button class="btn-primary" id="login-btn">Sign in</button>
-    <p class="auth-switch">First time? <a href="#" id="show-register">Create an account</a></p>
-    <p id="login-error" class="hidden"></p>
-  </div>
+  <div class="auth-card">
+    <!-- Sign-in sub-view -->
+    <div id="view-signin">
+      <p class="subtitle">Sign in to your account.</p>
+      <input type="email" id="login-email" placeholder="Email address" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Password">
+      <button class="btn-primary" id="login-btn">Sign in</button>
+      <p class="auth-switch">First time? <a href="#" id="show-register">Create an account</a></p>
+      <p id="login-error" class="hidden"></p>
+    </div>
 
-  <!-- Register sub-view -->
-  <div id="view-register" class="hidden">
-    <p class="subtitle">Create your account.</p>
-    <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
-    <input type="text" id="reg-name" placeholder="e.g. Ms Smith" autocomplete="name">
-    <input type="password" id="reg-password" placeholder="Password (min 8 characters)">
-    <input type="password" id="reg-confirm" placeholder="Confirm password">
-    <button class="btn-primary" id="reg-btn">Create account</button>
-    <p class="auth-switch">Already have an account? <a href="#" id="show-signin">Sign in</a></p>
-    <p id="reg-error" class="hidden"></p>
+    <!-- Register sub-view -->
+    <div id="view-register" class="hidden">
+      <p class="subtitle">Create your account.</p>
+      <input type="email" id="reg-email" placeholder="Email address" autocomplete="email">
+      <input type="text" id="reg-name" placeholder="Your name (e.g. Ms Smith)" autocomplete="name">
+      <input type="password" id="reg-password" placeholder="Password (min 8 characters)">
+      <input type="password" id="reg-confirm" placeholder="Confirm password">
+      <button class="btn-primary" id="reg-btn">Create account</button>
+      <p class="auth-switch">Already have an account? <a href="#" id="show-signin">Sign in</a></p>
+      <p id="reg-error" class="hidden"></p>
+    </div>
   </div>
 </div>
 

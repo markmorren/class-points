@@ -97,24 +97,51 @@ button:active { transform: scale(.97); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
-  gap: 16px;
+  min-height: 100vh;
+  padding: 40px 20px;
+  gap: 24px;
 }
-#screen-login h1 { font-size: 28px; font-weight: 800; }
-#screen-login p.subtitle { color: var(--muted); font-size: 16px; }
-#screen-login input[type="email"] {
+#screen-login h1 { font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+
+.auth-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  padding: 32px 28px;
   width: 100%;
-  max-width: 360px;
-  padding: 14px 16px;
+  max-width: 380px;
+}
+
+#view-signin, #view-register {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#screen-login p.subtitle {
+  color: var(--muted);
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+#screen-login input {
+  width: 100%;
+  padding: 13px 16px;
   font-size: 16px;
+  font-family: inherit;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   outline: none;
+  background: var(--bg);
+  color: var(--text);
 }
-#screen-login input[type="email"]:focus { border-color: var(--accent); }
-#screen-login .btn-primary { width: 100%; max-width: 360px; font-size: 16px; }
-#login-confirm { color: var(--accent); font-weight: 600; text-align: center; }
-#login-error { color: var(--danger); text-align: center; font-size: 14px; }
+#screen-login input:focus { border-color: var(--accent); background: #fff; }
+#screen-login .btn-primary { width: 100%; font-size: 16px; margin-top: 4px; }
+#login-error, #reg-error { color: var(--danger); font-size: 14px; text-align: center; min-height: 20px; }
+.auth-switch { font-size: 14px; color: var(--muted); text-align: center; }
+.auth-switch a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.auth-switch a:hover { text-decoration: underline; }
 
 /* ── Classes screen ── */
 #screen-classes { padding: 20px; }
