@@ -427,6 +427,14 @@ button:active { transform: scale(.97); }
 .modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
 .modal label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
 
+/* ── Help modal ── */
+.help-body { display: flex; flex-direction: column; gap: 16px; margin: 4px 0 16px; }
+.help-row { display: flex; gap: 14px; align-items: flex-start; }
+.help-icon { font-size: 22px; width: 28px; flex-shrink: 0; text-align: center; margin-top: 1px; }
+.help-row div { font-size: 15px; line-height: 1.45; color: var(--text); }
+.help-row strong { font-weight: 700; }
+.help-footer { font-size: 13px; color: var(--muted); text-align: center; border-top: 1px solid var(--border); padding-top: 16px; }
+
 /* ── Spinner ── */
 .spinner {
   display: inline-block;

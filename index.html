@@ -107,6 +107,11 @@
   </div>
 
   <div class="settings-section">
+    <h3>Help</h3>
+    <button class="btn-secondary" id="help-open-btn" style="font-size:14px;width:100%">Show getting started guide</button>
+  </div>
+
+  <div class="settings-section">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <h3 style="margin:0">Pupils</h3>
       <div style="display:flex;gap:8px">
@@ -139,6 +144,36 @@
     <div class="danger-actions">
       <a id="export-csv-btn" class="btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center">Export CSV</a>
       <button class="btn-danger" id="archive-class-btn">Archive Class</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HELP MODAL ── -->
+<div id="help-modal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:460px">
+    <h3>Getting started</h3>
+    <div class="help-body">
+      <div class="help-row">
+        <span class="help-icon">👆</span>
+        <div><strong>Award a point</strong><br>Tap any pupil card, then tap a behaviour category.</div>
+      </div>
+      <div class="help-row">
+        <span class="help-icon">👥</span>
+        <div><strong>Group award</strong><br>Tap <strong>Group</strong>, select multiple pupils, then tap <strong>Award points →</strong>.</div>
+      </div>
+      <div class="help-row">
+        <span class="help-icon">📋</span>
+        <div><strong>Board view</strong><br>Tap 📋 to open the live leaderboard on a projector while you use the app on your iPad.</div>
+      </div>
+      <div class="help-row">
+        <span class="help-icon">⚙️</span>
+        <div><strong>Pupils &amp; categories</strong><br>Tap the ⚙️ Settings button to add or edit pupils, import a class list from CSV, and manage behaviour categories.</div>
+      </div>
+    </div>
+    <p class="help-footer">You can find this guide again at any time via the ⚙️ Settings button.</p>
+    <div class="modal-actions" style="justify-content:space-between;margin-top:20px">
+      <button class="btn-secondary" id="help-never-btn">Don't show again</button>
+      <button class="btn-primary" id="help-ok-btn">Got it</button>
     </div>
   </div>
 </div>
@@ -266,6 +301,23 @@ function showClass(cls) {
   loadClassData();
 }
 
+// ── Help ──
+function showHelp() {
+  document.getElementById('help-modal').classList.remove('hidden');
+}
+function hideHelp() {
+  document.getElementById('help-modal').classList.add('hidden');
+}
+document.getElementById('help-ok-btn').addEventListener('click', hideHelp);
+document.getElementById('help-never-btn').addEventListener('click', () => {
+  localStorage.setItem('help_dismissed', '1');
+  hideHelp();
+});
+document.getElementById('help-open-btn').addEventListener('click', () => {
+  document.getElementById('settings-panel').classList.remove('open');
+  showHelp();
+});
+
 // ── Boot ──
 async function boot() {
   const teacher = await api('/auth/me');
@@ -273,6 +325,7 @@ async function boot() {
   state.teacher = teacher;
   document.getElementById('teacher-name').textContent = teacher.display_name;
   showClasses();
+  if (!localStorage.getItem('help_dismissed')) showHelp();
 }
 
 // ── Login ──
@@ -334,6 +387,18 @@ document.getElementById('reg-btn').addEventListener('click', async () => {
     errEl.classList.remove('hidden');
     document.getElementById('reg-btn').disabled = false;
   }
+});
+
+// Enter key submits the active auth form
+['login-email','login-password'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+});
+['reg-email','reg-name','reg-password','reg-confirm'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('reg-btn').click();
+  });
 });
 
 document.getElementById('signout-btn').addEventListener('click', async () => {
