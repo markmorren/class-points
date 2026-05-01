@@ -4,35 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Class Points</title>
-  <link rel="stylesheet" href="/style.css?v=2">
+  <link rel="stylesheet" href="/style.css?v=3">
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
-<div id="screen-login" class="screen">
-  <h1>Class Points</h1>
-
-  <div class="auth-card">
-    <!-- Sign-in sub-view -->
-    <div id="view-signin">
-      <p class="subtitle">Sign in to your account.</p>
-      <input type="email" id="login-email" placeholder="Email address" autocomplete="email">
-      <input type="password" id="login-password" placeholder="Password">
-      <button class="btn-primary" id="login-btn">Sign in</button>
-      <p class="auth-switch">First time? <a href="#" id="show-register">Create an account</a></p>
-      <p id="login-error" class="hidden"></p>
-    </div>
-
-    <!-- Register sub-view -->
-    <div id="view-register" class="hidden">
-      <p class="subtitle">Create your account.</p>
-      <input type="email" id="reg-email" placeholder="Email address" autocomplete="email">
-      <input type="text" id="reg-name" placeholder="Your name (e.g. Ms Smith)" autocomplete="name">
-      <input type="password" id="reg-password" placeholder="Password (min 8 characters)">
-      <input type="password" id="reg-confirm" placeholder="Confirm password">
-      <button class="btn-primary" id="reg-btn">Create account</button>
-      <p class="auth-switch">Already have an account? <a href="#" id="show-signin">Sign in</a></p>
-      <p id="reg-error" class="hidden"></p>
+<!-- ── DB STARTUP MODAL ── -->
+<div id="modal-db" class="modal-backdrop">
+  <div class="modal">
+    <h3>Class Points</h3>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px">Your data stays entirely on this device — nothing is sent to any server.</p>
+    <div id="db-error" class="hidden" style="color:#e53935;font-size:13px;margin-bottom:12px;padding:8px 12px;background:#fde8e8;border-radius:8px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" id="db-load-btn">Load existing data (.db file)</button>
+      <input type="file" id="db-file-input" accept=".db" style="display:none">
+      <button class="btn-secondary" id="db-fresh-btn">Start fresh</button>
     </div>
   </div>
 </div>
@@ -41,14 +26,12 @@
 <div id="screen-classes" class="screen hidden">
   <div class="topbar">
     <h1>Class Points</h1>
-    <span id="teacher-name" style="color:var(--muted);font-size:14px"></span>
-    <button class="btn-secondary" id="signout-btn" style="padding:8px 14px;font-size:14px">Sign out</button>
-  </div>
-  <div style="padding:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <h2 style="font-size:20px;font-weight:700">Your Classes</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-secondary" id="save-btn" style="padding:8px 14px;font-size:14px">Save</button>
       <button class="btn-primary" id="new-class-btn">+ New Class</button>
     </div>
+  </div>
+  <div style="padding:20px">
     <div class="classes-grid" id="classes-grid">
       <div style="padding:40px;text-align:center;color:var(--muted)"><div class="spinner"></div></div>
     </div>
@@ -76,7 +59,7 @@
       <h4>Top of class</h4>
       <div id="leaderboard-list"></div>
       <div style="margin-top:12px">
-        <a id="board-link" href="#" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none">Open board view ↗</a>
+        <a id="board-link" href="board.html" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none">Open board view ↗</a>
       </div>
     </div>
   </div>
@@ -130,19 +113,10 @@
     <div id="cats-list"></div>
   </div>
 
-  <div class="settings-section" id="invite-section">
-    <h3>Invite a Colleague</h3>
-    <div class="invite-url-box" id="invite-url">–</div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-secondary" id="copy-invite-btn">Copy Link</button>
-      <button class="btn-secondary" id="new-invite-btn">New Link</button>
-    </div>
-  </div>
-
   <div class="settings-section danger-zone">
     <h3>Danger Zone</h3>
     <div class="danger-actions">
-      <a id="export-csv-btn" class="btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center">Export CSV</a>
+      <button class="btn-secondary" id="export-csv-btn">Export CSV</button>
       <button class="btn-danger" id="archive-class-btn">Archive Class</button>
     </div>
   </div>
@@ -174,8 +148,8 @@
         <div><strong>Board view</strong><br>Tap 📋 to open the live leaderboard — great on a projector while you use the app on your iPad.</div>
       </div>
       <div class="help-row">
-        <span class="help-icon">🏷️</span>
-        <div><strong>Add categories</strong><br>Tap ⚙️ Settings → <strong>Behaviour Categories → + Add</strong> to create your own point categories.</div>
+        <span class="help-icon">💾</span>
+        <div><strong>Save your data</strong><br>Tap <strong>Save</strong> in the top bar to download your data as a .db file. Load it again next time you open the app.</div>
       </div>
     </div>
     <p class="help-footer">You can find this guide again at any time via the ⚙️ Settings button.</p>
@@ -256,10 +230,62 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js"></script>
 <script type="module">
-// ── State ──
+
+// ── Schema ──
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS classes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  archived_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS students (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_id INTEGER NOT NULL,
+  display_name TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_id INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  points INTEGER NOT NULL DEFAULT 1,
+  is_positive INTEGER NOT NULL DEFAULT 1,
+  icon TEXT
+);
+CREATE TABLE IF NOT EXISTS group_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_id INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS point_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_id INTEGER NOT NULL,
+  student_id INTEGER NOT NULL,
+  category_id INTEGER NOT NULL,
+  points INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  group_event_id INTEGER
+);
+`;
+
+const DEFAULT_CATEGORIES = [
+  { icon: '🌟', label: 'Great Work', points: 1 },
+  { icon: '💛', label: 'Kindness', points: 1 },
+  { icon: '🏅', label: 'Leadership', points: 1 },
+  { icon: '🎨', label: 'Creativity', points: 2 },
+];
+
+// ── DB globals ──
+let sqlDb = null;
+let SQL = null;
+let dbDirty = false;
+
+// ── App state ──
 let state = {
-  teacher: null,
   classes: [],
   currentClass: null,
   students: [],
@@ -267,46 +293,130 @@ let state = {
   leaderboard: [],
   groupMode: false,
   selectedStudents: new Set(),
-  pendingUndoId: null,
+  pendingUndo: null,
   undoTimer: null,
 };
 
-// ── API helpers ──
-async function api(path, opts = {}) {
-  const res = await fetch('/api' + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+// ── BroadcastChannel (board view) ──
+const boardChannel = new BroadcastChannel('class-points-board');
+boardChannel.addEventListener('message', e => {
+  if (e.data.type === 'request-snapshot') broadcastLeaderboard();
+});
+
+function broadcastLeaderboard() {
+  if (!state.currentClass || !sqlDb) return;
+  const lb = dbAll(
+    `SELECT s.id, s.display_name, COALESCE(SUM(pe.points), 0) as total
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id AND pe.class_id = ?
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY total DESC, s.display_name ASC`,
+    [state.currentClass.id, state.currentClass.id]
+  );
+  boardChannel.postMessage({
+    type: 'leaderboard-update',
+    className: state.currentClass.name,
+    leaderboard: lb,
   });
-  if (res.status === 401) { showLogin(); return null; }
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error');
-  return data;
 }
 
-// ── Navigation ──
-function showLogin() {
-  show('screen-login');
-  hide('screen-classes');
-  hide('screen-class');
+// ── DB helpers ──
+function dbAll(sql, params = []) {
+  const stmt = sqlDb.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
 }
-function showClasses() {
-  show('screen-classes');
-  hide('screen-login');
-  hide('screen-class');
-  loadClasses();
+
+function dbRun(sql, params = []) {
+  sqlDb.run(sql, params);
 }
-function showClass(cls) {
-  state.currentClass = cls;
-  state.groupMode = false;
-  state.selectedStudents.clear();
-  document.getElementById('class-title').textContent = cls.name;
-  document.getElementById('board-link').href = `/board.html?class=${cls.id}`;
-  document.getElementById('group-btn').classList.remove('active');
-  show('screen-class');
-  hide('screen-login');
-  hide('screen-classes');
-  loadClassData();
+
+function dbGet(sql, params = []) {
+  return dbAll(sql, params)[0] || null;
+}
+
+function lastInsertId() {
+  return sqlDb.exec('SELECT last_insert_rowid() as id')[0].values[0][0];
+}
+
+// ── Dirty flag ──
+function setDirty(val) {
+  dbDirty = val;
+  const btn = document.getElementById('save-btn');
+  btn.textContent = val ? 'Save *' : 'Save';
+  btn.style.fontWeight = val ? '700' : '';
+}
+
+window.addEventListener('beforeunload', e => {
+  if (dbDirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── Save ──
+function saveDbFile() {
+  const bytes = sqlDb.export();
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  a.href = url;
+  a.download = `class-points-${ds}.db`;
+  a.click();
+  URL.revokeObjectURL(url);
+  setDirty(false);
+}
+
+document.getElementById('save-btn').addEventListener('click', saveDbFile);
+
+// ── Startup ──
+async function boot() {
+  try {
+    SQL = await initSqlJs({
+      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`,
+    });
+  } catch (e) {
+    const errEl = document.getElementById('db-error');
+    errEl.textContent = 'Failed to load database engine. Please check your connection and reload.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('db-load-btn').addEventListener('click', () => {
+    document.getElementById('db-file-input').click();
+  });
+
+  document.getElementById('db-file-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      sqlDb = new SQL.Database(new Uint8Array(buf));
+      sqlDb.run(SCHEMA_SQL);
+      setDirty(false);
+      closeStartup();
+    } catch (err) {
+      const errEl = document.getElementById('db-error');
+      errEl.textContent = 'Could not load that file: ' + err.message;
+      errEl.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('db-fresh-btn').addEventListener('click', () => {
+    sqlDb = new SQL.Database();
+    sqlDb.run(SCHEMA_SQL);
+    setDirty(false);
+    closeStartup();
+  });
+}
+
+function closeStartup() {
+  document.getElementById('modal-db').classList.add('hidden');
+  showClasses();
+  if (!localStorage.getItem('help_dismissed')) showHelp();
 }
 
 // ── Help ──
@@ -326,100 +436,28 @@ document.getElementById('help-open-btn').addEventListener('click', () => {
   showHelp();
 });
 
-// ── Boot ──
-async function boot() {
-  const teacher = await api('/auth/me');
-  if (!teacher) { showLogin(); return; }
-  state.teacher = teacher;
-  document.getElementById('teacher-name').textContent = teacher.display_name;
-  showClasses();
-  if (!localStorage.getItem('help_dismissed')) showHelp();
+// ── Navigation ──
+function showClasses() {
+  show('screen-classes');
+  hide('screen-class');
+  loadClasses();
 }
 
-// ── Login ──
-// toggle between sign-in and register sub-views
-document.getElementById('show-register').addEventListener('click', e => {
-  e.preventDefault();
-  document.getElementById('view-signin').classList.add('hidden');
-  document.getElementById('view-register').classList.remove('hidden');
-});
-document.getElementById('show-signin').addEventListener('click', e => {
-  e.preventDefault();
-  document.getElementById('view-register').classList.add('hidden');
-  document.getElementById('view-signin').classList.remove('hidden');
-});
-
-// sign in
-document.getElementById('login-btn').addEventListener('click', async () => {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
-  errEl.classList.add('hidden');
-  if (!email || !password) return;
-  document.getElementById('login-btn').disabled = true;
-  try {
-    await api('/auth/login', { method: 'POST', body: { email, password } });
-    await boot();
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
-    document.getElementById('login-btn').disabled = false;
-  }
-});
-
-// register
-document.getElementById('reg-btn').addEventListener('click', async () => {
-  const email = document.getElementById('reg-email').value.trim();
-  const display_name = document.getElementById('reg-name').value.trim();
-  const password = document.getElementById('reg-password').value;
-  const confirm = document.getElementById('reg-confirm').value;
-  const errEl = document.getElementById('reg-error');
-  errEl.classList.add('hidden');
-  if (!email || !display_name || !password) return;
-  if (password !== confirm) {
-    errEl.textContent = 'Passwords do not match.';
-    errEl.classList.remove('hidden');
-    return;
-  }
-  if (password.length < 8) {
-    errEl.textContent = 'Password must be at least 8 characters.';
-    errEl.classList.remove('hidden');
-    return;
-  }
-  document.getElementById('reg-btn').disabled = true;
-  try {
-    await api('/auth/register', { method: 'POST', body: { email, display_name, password } });
-    await boot();
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
-    document.getElementById('reg-btn').disabled = false;
-  }
-});
-
-// Enter key submits the active auth form
-['login-email','login-password'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('login-btn').click();
-  });
-});
-['reg-email','reg-name','reg-password','reg-confirm'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('reg-btn').click();
-  });
-});
-
-document.getElementById('signout-btn').addEventListener('click', async () => {
-  await api('/auth/logout', { method: 'POST' });
-  showLogin();
-});
+function showClass(cls) {
+  state.currentClass = cls;
+  state.groupMode = false;
+  state.selectedStudents.clear();
+  document.getElementById('class-title').textContent = cls.name;
+  document.getElementById('group-btn').classList.remove('active');
+  show('screen-class');
+  hide('screen-classes');
+  loadClassData();
+}
 
 // ── Classes ──
-async function loadClasses() {
+function loadClasses() {
   const grid = document.getElementById('classes-grid');
-  grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)"><div class="spinner"></div></div>';
-  const classes = await api('/classes');
-  if (!classes) return;
+  const classes = dbAll('SELECT * FROM classes WHERE archived_at IS NULL ORDER BY created_at ASC');
   state.classes = classes;
   if (classes.length === 0) {
     grid.innerHTML = '<p style="color:var(--muted);padding:20px">No classes yet. Create one to get started.</p>';
@@ -427,43 +465,72 @@ async function loadClasses() {
   }
   grid.innerHTML = '';
   classes.forEach(cls => {
+    const studentCount = dbGet('SELECT COUNT(*) as n FROM students WHERE class_id = ?', [cls.id])?.n || 0;
+    const todayPts = getTodayPoints(cls.id);
     const tile = document.createElement('div');
     tile.className = 'class-tile';
     tile.innerHTML = `
-      ${cls.role !== 'owner' ? `<span class="co-tag">Co-teaching</span>` : ''}
       <h3>${esc(cls.name)}</h3>
-      <p class="meta">${cls.student_count} pupil${cls.student_count !== 1 ? 's' : ''}</p>
-      <p class="meta">Today: ${cls.today_points || 0} pts</p>
+      <p class="meta">${studentCount} pupil${studentCount !== 1 ? 's' : ''}</p>
+      <p class="meta">Today: ${todayPts} pts</p>
     `;
     tile.addEventListener('click', () => showClass(cls));
     grid.appendChild(tile);
   });
 }
 
+function getTodayPoints(classId) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ts = Math.floor(today.getTime() / 1000);
+  return dbGet('SELECT COALESCE(SUM(points), 0) as n FROM point_events WHERE class_id = ? AND created_at >= ?', [classId, ts])?.n || 0;
+}
+
 document.getElementById('new-class-btn').addEventListener('click', () => openModal('modal-new-class'));
-document.getElementById('create-class-btn').addEventListener('click', async () => {
+
+document.getElementById('create-class-btn').addEventListener('click', () => {
   const name = document.getElementById('new-class-name').value.trim();
   if (!name) return;
-  try {
-    await api('/classes', { method: 'POST', body: { name } });
-    closeModal('modal-new-class');
-    document.getElementById('new-class-name').value = '';
-    loadClasses();
-  } catch (e) { showToast('Error: ' + e.message, null, 3000); }
+  const now = Math.floor(Date.now() / 1000);
+  dbRun('INSERT INTO classes (name, created_at) VALUES (?, ?)', [name, now]);
+  const classId = lastInsertId();
+  DEFAULT_CATEGORIES.forEach(c => {
+    dbRun('INSERT INTO categories (class_id, label, points, icon) VALUES (?, ?, ?, ?)',
+      [classId, c.label, c.points, c.icon]);
+  });
+  setDirty(true);
+  closeModal('modal-new-class');
+  document.getElementById('new-class-name').value = '';
+  loadClasses();
+});
+
+['new-class-name'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('create-class-btn').click();
+  });
 });
 
 // ── Class data ──
-async function loadClassData() {
+function loadClassData() {
   const classId = state.currentClass.id;
-  const [students, categories, leaderboard] = await Promise.all([
-    api(`/classes/${classId}/students`),
-    api(`/classes/${classId}/categories`),
-    api(`/classes/${classId}/leaderboard`),
-  ]);
-  if (!students) return;
-  state.students = students;
-  state.categories = categories;
-  state.leaderboard = leaderboard;
+  state.students = dbAll(
+    `SELECT s.id, s.display_name, COALESCE(SUM(pe.points), 0) as total_points
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id AND pe.class_id = ?
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY s.position ASC, s.display_name ASC`,
+    [classId, classId]
+  );
+  state.categories = dbAll('SELECT * FROM categories WHERE class_id = ? ORDER BY id ASC', [classId]);
+  state.leaderboard = dbAll(
+    `SELECT s.id, s.display_name, COALESCE(SUM(pe.points), 0) as total
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id AND pe.class_id = ?
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY total DESC, s.display_name ASC`,
+    [classId, classId]
+  );
   renderPupilGrid();
   renderLeaderboard();
 }
@@ -577,45 +644,53 @@ document.getElementById('award-backdrop').addEventListener('click', () => {
   updateGroupBar();
 });
 
-async function awardPoints(category) {
+function awardPoints(category) {
   closeAwardSheet();
   const classId = state.currentClass.id;
-  let result;
+  const now = Math.floor(Date.now() / 1000);
 
-  try {
-    if (state.groupMode && state.selectedStudents.size > 1) {
-      result = await api(`/classes/${classId}/points/group`, {
-        method: 'POST',
-        body: { student_ids: [...state.selectedStudents], category_id: category.id },
-      });
-      showToast(`${category.icon || '⭐'} ${category.label} → ${result.count} pupils (+${category.points}pt)`, result.group_event_id);
-    } else {
-      const studentId = [...state.selectedStudents][0];
-      result = await api(`/classes/${classId}/points`, {
-        method: 'POST',
-        body: { student_id: studentId, category_id: category.id },
-      });
-      const student = state.students.find(s => s.id === studentId);
-      showToast(`✓ ${student?.display_name} · ${category.label} · +${category.points}pt`, result.id);
-    }
-
-    state.selectedStudents.clear();
-    if (state.groupMode) { state.groupMode = false; document.getElementById('group-btn').classList.remove('active'); }
-    updateGroupBar();
-    await loadClassData();
-  } catch (e) {
-    showToast('Error: ' + e.message, null, 3000);
+  if (state.groupMode && state.selectedStudents.size > 1) {
+    dbRun('INSERT INTO group_events (class_id, created_at) VALUES (?, ?)', [classId, now]);
+    const groupId = lastInsertId();
+    [...state.selectedStudents].forEach(studentId => {
+      dbRun('INSERT INTO point_events (class_id, student_id, category_id, points, created_at, group_event_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [classId, studentId, category.id, category.points, now, groupId]);
+    });
+    showToast(
+      `${category.icon || '⭐'} ${category.label} → ${state.selectedStudents.size} pupils (+${category.points}pt)`,
+      { type: 'group', groupId }
+    );
+  } else {
+    const studentId = [...state.selectedStudents][0];
+    dbRun('INSERT INTO point_events (class_id, student_id, category_id, points, created_at) VALUES (?, ?, ?, ?, ?)',
+      [classId, studentId, category.id, category.points, now]);
+    const eventId = lastInsertId();
+    const student = state.students.find(s => s.id === studentId);
+    showToast(
+      `✓ ${student?.display_name} · ${category.label} · +${category.points}pt`,
+      { type: 'single', id: eventId }
+    );
   }
+
+  setDirty(true);
+  state.selectedStudents.clear();
+  if (state.groupMode) {
+    state.groupMode = false;
+    document.getElementById('group-btn').classList.remove('active');
+  }
+  updateGroupBar();
+  loadClassData();
+  broadcastLeaderboard();
 }
 
 // ── Toast + Undo ──
-function showToast(msg, eventId, duration = 8000) {
+function showToast(msg, undoPayload, duration = 8000) {
   const toast = document.getElementById('toast');
-  if (state.undoTimer) { clearTimeout(state.undoTimer); }
+  if (state.undoTimer) clearTimeout(state.undoTimer);
 
   toast.innerHTML = `<span>${msg}</span>`;
-  if (eventId) {
-    state.pendingUndoId = eventId;
+  if (undoPayload) {
+    state.pendingUndo = undoPayload;
     const undoBtn = document.createElement('button');
     undoBtn.textContent = 'Undo';
     undoBtn.addEventListener('click', undoLast);
@@ -626,17 +701,20 @@ function showToast(msg, eventId, duration = 8000) {
   state.undoTimer = setTimeout(() => toast.classList.remove('show'), duration);
 }
 
-async function undoLast() {
-  const classId = state.currentClass.id;
-  const eventId = state.pendingUndoId;
-  if (!eventId) return;
+function undoLast() {
+  const pending = state.pendingUndo;
+  if (!pending) return;
   document.getElementById('toast').classList.remove('show');
-  try {
-    await api(`/classes/${classId}/points/${eventId}`, { method: 'DELETE' });
-    await loadClassData();
-  } catch (e) {
-    showToast('Could not undo: ' + e.message, null, 3000);
+  if (pending.type === 'single') {
+    dbRun('DELETE FROM point_events WHERE id = ?', [pending.id]);
+  } else {
+    dbRun('DELETE FROM point_events WHERE group_event_id = ?', [pending.groupId]);
+    dbRun('DELETE FROM group_events WHERE id = ?', [pending.groupId]);
   }
+  state.pendingUndo = null;
+  setDirty(true);
+  loadClassData();
+  broadcastLeaderboard();
 }
 
 // ── Settings ──
@@ -646,13 +724,10 @@ document.getElementById('settings-close').addEventListener('click', () => {
   loadClassData();
 });
 
-async function openSettings() {
+function openSettings() {
   document.getElementById('settings-panel').classList.add('open');
   renderSettingsPupils();
   renderSettingsCats();
-  loadInviteLink();
-  const classId = state.currentClass.id;
-  document.getElementById('export-csv-btn').href = `/api/classes/${classId}/export/csv`;
 }
 
 function renderSettingsPupils() {
@@ -668,15 +743,17 @@ function renderSettingsPupils() {
         <button class="btn-danger" data-id="${s.id}">Remove</button>
       </div>
     `;
-    item.querySelector('.btn-secondary').addEventListener('click', (e) => {
+    item.querySelector('.btn-secondary').addEventListener('click', e => {
       document.getElementById('rename-pupil-id').value = e.target.dataset.id;
       document.getElementById('rename-pupil-name').value = e.target.dataset.name;
       openModal('modal-rename-pupil');
     });
-    item.querySelector('.btn-danger').addEventListener('click', async (e) => {
+    item.querySelector('.btn-danger').addEventListener('click', e => {
       if (!confirm(`Remove ${s.display_name}? This also deletes their points history.`)) return;
-      await api(`/classes/${state.currentClass.id}/students/${e.target.dataset.id}`, { method: 'DELETE' });
-      state.students = state.students.filter(st => st.id !== e.target.dataset.id);
+      dbRun('DELETE FROM point_events WHERE student_id = ?', [s.id]);
+      dbRun('DELETE FROM students WHERE id = ?', [s.id]);
+      setDirty(true);
+      state.students = state.students.filter(st => st.id !== s.id);
       renderSettingsPupils();
     });
     list.appendChild(item);
@@ -704,41 +781,22 @@ function renderSettingsCats() {
       document.getElementById('new-cat-pts').value = c.points;
       openModal('modal-add-cat');
     });
-    item.querySelector('.btn-danger').addEventListener('click', async (e) => {
-      try {
-        await api(`/classes/${state.currentClass.id}/categories/${e.target.dataset.id}`, { method: 'DELETE' });
-        state.categories = state.categories.filter(cat => cat.id !== e.target.dataset.id);
-        renderSettingsCats();
-      } catch (err) { showToast(err.message, null, 3000); }
+    item.querySelector('.btn-danger').addEventListener('click', () => {
+      dbRun('DELETE FROM point_events WHERE category_id = ?', [c.id]);
+      dbRun('DELETE FROM categories WHERE id = ?', [c.id]);
+      setDirty(true);
+      state.categories = state.categories.filter(cat => cat.id !== c.id);
+      renderSettingsCats();
     });
     list.appendChild(item);
   });
 }
 
-async function loadInviteLink() {
-  // Only generate a new link on demand; show placeholder for now
-  document.getElementById('invite-url').textContent = 'Click "New Link" to generate an invite.';
-}
-
-document.getElementById('new-invite-btn').addEventListener('click', async () => {
-  try {
-    const { url } = await api(`/classes/${state.currentClass.id}/invites`, { method: 'POST' });
-    document.getElementById('invite-url').textContent = url;
-  } catch (e) { showToast(e.message, null, 3000); }
-});
-
-document.getElementById('copy-invite-btn').addEventListener('click', () => {
-  const url = document.getElementById('invite-url').textContent;
-  if (url.startsWith('Click')) return;
-  navigator.clipboard.writeText(url).then(() => showToast('Link copied!', null, 2000));
-});
-
-document.getElementById('archive-class-btn').addEventListener('click', async () => {
+document.getElementById('archive-class-btn').addEventListener('click', () => {
   if (!confirm(`Archive ${state.currentClass.name}? It will be hidden from your dashboard.`)) return;
-  await api(`/classes/${state.currentClass.id}`, {
-    method: 'PATCH',
-    body: { archived_at: Math.floor(Date.now() / 1000) },
-  });
+  dbRun('UPDATE classes SET archived_at = ? WHERE id = ?',
+    [Math.floor(Date.now() / 1000), state.currentClass.id]);
+  setDirty(true);
   document.getElementById('settings-panel').classList.remove('open');
   showClasses();
 });
@@ -748,16 +806,31 @@ document.getElementById('add-pupil-btn').addEventListener('click', () => {
   document.getElementById('new-pupil-name').value = '';
   openModal('modal-add-pupil');
 });
-document.getElementById('save-pupil-btn').addEventListener('click', async () => {
+
+document.getElementById('save-pupil-btn').addEventListener('click', () => {
   const name = document.getElementById('new-pupil-name').value.trim();
   if (!name) return;
-  try {
-    const student = await api(`/classes/${state.currentClass.id}/students`, { method: 'POST', body: { display_name: name } });
-    state.students.push(student);
-    closeModal('modal-add-pupil');
-    document.getElementById('new-pupil-name').value = '';
-    renderSettingsPupils();
-  } catch (e) { showToast(e.message, null, 3000); }
+  const now = Math.floor(Date.now() / 1000);
+  dbRun('INSERT INTO students (class_id, display_name, created_at) VALUES (?, ?, ?)',
+    [state.currentClass.id, name, now]);
+  setDirty(true);
+  closeModal('modal-add-pupil');
+  document.getElementById('new-pupil-name').value = '';
+  const classId = state.currentClass.id;
+  state.students = dbAll(
+    `SELECT s.id, s.display_name, COALESCE(SUM(pe.points), 0) as total_points
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id AND pe.class_id = ?
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY s.position ASC, s.display_name ASC`,
+    [classId, classId]
+  );
+  renderSettingsPupils();
+});
+
+document.getElementById('new-pupil-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('save-pupil-btn').click();
 });
 
 document.getElementById('add-cat-btn').addEventListener('click', () => {
@@ -768,36 +841,61 @@ document.getElementById('add-cat-btn').addEventListener('click', () => {
   document.getElementById('new-cat-pts').value = '1';
   openModal('modal-add-cat');
 });
-document.getElementById('save-cat-btn').addEventListener('click', async () => {
+
+document.getElementById('save-cat-btn').addEventListener('click', () => {
   const id = document.getElementById('edit-cat-id').value;
   const icon = document.getElementById('new-cat-icon').value.trim();
   const label = document.getElementById('new-cat-label').value.trim();
   const points = parseInt(document.getElementById('new-cat-pts').value) || 1;
   if (!label) return;
   const classId = state.currentClass.id;
-  try {
-    if (id) {
-      const cat = await api(`/classes/${classId}/categories/${id}`, { method: 'PATCH', body: { icon, label, points } });
-      state.categories = state.categories.map(c => c.id === id ? cat : c);
-    } else {
-      const cat = await api(`/classes/${classId}/categories`, { method: 'POST', body: { icon, label, points } });
-      state.categories.push(cat);
-    }
-    closeModal('modal-add-cat');
-    renderSettingsCats();
-  } catch (e) { showToast(e.message, null, 3000); }
+  if (id) {
+    dbRun('UPDATE categories SET icon = ?, label = ?, points = ? WHERE id = ?', [icon, label, points, id]);
+  } else {
+    dbRun('INSERT INTO categories (class_id, label, points, icon) VALUES (?, ?, ?, ?)',
+      [classId, label, points, icon]);
+  }
+  setDirty(true);
+  closeModal('modal-add-cat');
+  state.categories = dbAll('SELECT * FROM categories WHERE class_id = ? ORDER BY id ASC', [classId]);
+  renderSettingsCats();
 });
 
-document.getElementById('save-rename-btn').addEventListener('click', async () => {
-  const id = document.getElementById('rename-pupil-id').value;
+document.getElementById('save-rename-btn').addEventListener('click', () => {
+  const id = parseInt(document.getElementById('rename-pupil-id').value);
   const name = document.getElementById('rename-pupil-name').value.trim();
   if (!name || !id) return;
-  try {
-    const student = await api(`/classes/${state.currentClass.id}/students/${id}`, { method: 'PATCH', body: { display_name: name } });
-    state.students = state.students.map(s => s.id === id ? { ...s, display_name: student.display_name } : s);
-    closeModal('modal-rename-pupil');
-    renderSettingsPupils();
-  } catch (e) { showToast(e.message, null, 3000); }
+  dbRun('UPDATE students SET display_name = ? WHERE id = ?', [name, id]);
+  setDirty(true);
+  closeModal('modal-rename-pupil');
+  state.students = state.students.map(s => s.id === id ? { ...s, display_name: name } : s);
+  renderSettingsPupils();
+});
+
+document.getElementById('rename-pupil-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('save-rename-btn').click();
+});
+
+// ── CSV Export ──
+document.getElementById('export-csv-btn').addEventListener('click', () => {
+  const classId = state.currentClass.id;
+  const rows = dbAll(
+    `SELECT s.display_name, COALESCE(SUM(pe.points), 0) as total
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY total DESC, s.display_name ASC`,
+    [classId]
+  );
+  let csv = 'Name,Total Points\n';
+  rows.forEach(r => { csv += `"${(r.display_name || '').replace(/"/g, '""')}",${r.total}\n`; });
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${state.currentClass.name}-points.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
 // ── Nav ──
@@ -810,8 +908,10 @@ document.getElementById('back-to-classes').addEventListener('click', () => {
   document.getElementById('settings-panel').classList.remove('open');
   showClasses();
 });
+
 document.getElementById('board-btn').addEventListener('click', () => {
-  window.open(`/board.html?class=${state.currentClass.id}`, '_blank');
+  window.open('board.html', '_blank');
+  setTimeout(broadcastLeaderboard, 500);
 });
 
 // ── Utilities ──
@@ -847,7 +947,7 @@ document.getElementById('bulk-import-open-btn').addEventListener('click', () => 
   openModal('modal-bulk-import');
 });
 
-document.getElementById('bulk-template-btn').addEventListener('click', (e) => {
+document.getElementById('bulk-template-btn').addEventListener('click', e => {
   e.preventDefault();
   const csv = 'Alex J.\nBeth K.\nCharlie L.\n';
   const a = document.createElement('a');
@@ -857,7 +957,7 @@ document.getElementById('bulk-template-btn').addEventListener('click', (e) => {
   URL.revokeObjectURL(a.href);
 });
 
-document.getElementById('bulk-file').addEventListener('change', async (e) => {
+document.getElementById('bulk-file').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
@@ -882,31 +982,34 @@ function updateBulkPreview() {
   btn.textContent = n > 0 ? `Import ${n} Pupil${n !== 1 ? 's' : ''}` : 'Import';
 }
 
-document.getElementById('bulk-import-btn').addEventListener('click', async () => {
+document.getElementById('bulk-import-btn').addEventListener('click', () => {
   const names = parseBulkText(document.getElementById('bulk-paste').value);
   if (!names.length) return;
-  const btn = document.getElementById('bulk-import-btn');
-  btn.disabled = true;
-  btn.textContent = 'Importing…';
-  try {
-    const result = await api(`/classes/${state.currentClass.id}/students/bulk`, {
-      method: 'POST',
-      body: { names },
-    });
-    closeModal('modal-bulk-import');
-    const c = result.created.length;
-    const s = result.skipped.length;
-    const msg = s > 0
-      ? `Added ${c} pupil${c !== 1 ? 's' : ''} · ${s} skipped (already exist)`
-      : `Added ${c} pupil${c !== 1 ? 's' : ''}`;
-    showToast(msg, null, 4000);
-    const students = await api(`/classes/${state.currentClass.id}/students`);
-    if (students) { state.students = students; renderSettingsPupils(); }
-  } catch (e) {
-    btn.disabled = false;
-    updateBulkPreview();
-    showToast('Error: ' + e.message, null, 3000);
-  }
+  const classId = state.currentClass.id;
+  const now = Math.floor(Date.now() / 1000);
+  const existing = new Set(state.students.map(s => s.display_name.toLowerCase()));
+  const toAdd = names.filter(n => !existing.has(n.toLowerCase()));
+  const skipped = names.length - toAdd.length;
+  toAdd.forEach(name => {
+    dbRun('INSERT INTO students (class_id, display_name, created_at) VALUES (?, ?, ?)',
+      [classId, name, now]);
+  });
+  setDirty(true);
+  closeModal('modal-bulk-import');
+  const msg = skipped > 0
+    ? `Added ${toAdd.length} pupil${toAdd.length !== 1 ? 's' : ''} · ${skipped} skipped (already exist)`
+    : `Added ${toAdd.length} pupil${toAdd.length !== 1 ? 's' : ''}`;
+  showToast(msg, null, 4000);
+  state.students = dbAll(
+    `SELECT s.id, s.display_name, COALESCE(SUM(pe.points), 0) as total_points
+     FROM students s
+     LEFT JOIN point_events pe ON pe.student_id = s.id AND pe.class_id = ?
+     WHERE s.class_id = ?
+     GROUP BY s.id
+     ORDER BY s.position ASC, s.display_name ASC`,
+    [classId, classId]
+  );
+  renderSettingsPupils();
 });
 
 // ── Start ──

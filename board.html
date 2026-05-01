@@ -10,71 +10,55 @@
 
 <div class="board-header">
   <h1 id="class-name">Class Points</h1>
-  <p class="sub" id="board-status">Loading…</p>
+  <p class="sub" id="board-status">Waiting for teacher console…</p>
 </div>
 
 <div class="board-list" id="board-list"></div>
 
 <script type="module">
-  const params = new URLSearchParams(location.search);
-  const classId = params.get('class');
   const medals = ['🥇', '🥈', '🥉'];
-  let lastData = null;
+  const channel = new BroadcastChannel('class-points-board');
 
-  if (!classId) {
-    document.getElementById('board-status').textContent = 'No class selected. Open this page from the teacher console.';
-  } else {
-    tick();
-    setInterval(tick, 3000);
-  }
-
-  async function tick() {
-    try {
-      const res = await fetch(`/api/board/${classId}`);
-      if (res.status === 401) {
-        document.getElementById('board-status').textContent = 'Please sign in on this device first, then re-open this page.';
-        return;
-      }
-      if (!res.ok) {
-        document.getElementById('board-status').textContent = 'Class not found.';
-        return;
-      }
-      const data = await res.json();
-      document.getElementById('class-name').textContent = data.class_name;
+  channel.addEventListener('message', e => {
+    if (e.data.type === 'leaderboard-update') {
+      document.getElementById('class-name').textContent = e.data.className || 'Class Points';
       document.getElementById('board-status').textContent = '● Live';
-      render(data.leaderboard);
-      lastData = data;
-    } catch {
-      document.getElementById('board-status').textContent = 'Reconnecting…';
+      render(e.data.leaderboard);
     }
-  }
+  });
+
+  // Ask teacher console for current snapshot on load
+  channel.postMessage({ type: 'request-snapshot' });
 
   function render(leaderboard) {
     const list = document.getElementById('board-list');
 
     leaderboard.forEach((entry, i) => {
-      const existing = list.querySelector(`[data-id="${entry.id}"]`);
+      const rank = i + 1;
+      const id = String(entry.id);
+      const existing = list.querySelector(`[data-id="${id}"]`);
       const prevTotal = existing ? parseInt(existing.dataset.total) : null;
       const changed = prevTotal !== null && prevTotal !== entry.total;
 
       if (existing) {
         existing.dataset.total = entry.total;
+        existing.className = `board-row rank-${rank}`;
         existing.querySelector('.board-pts').innerHTML =
           `${entry.total}<span class="board-pts-unit"> pts</span>`;
         if (changed) {
           existing.classList.remove('pulse');
-          void existing.offsetWidth; // force reflow
+          void existing.offsetWidth;
           existing.classList.add('pulse');
         }
       } else {
         const row = document.createElement('div');
-        row.className = `board-row rank-${entry.rank}`;
-        row.dataset.id = entry.id;
+        row.className = `board-row rank-${rank}`;
+        row.dataset.id = id;
         row.dataset.total = entry.total;
         row.innerHTML = `
-          ${entry.rank <= 3
+          ${rank <= 3
             ? `<span class="board-medal">${medals[i]}</span>`
-            : `<span class="board-rank-num">${entry.rank}</span>`}
+            : `<span class="board-rank-num">${rank}</span>`}
           <span class="board-name">${esc(entry.display_name)}</span>
           <span class="board-pts">${entry.total}<span class="board-pts-unit"> pts</span></span>
         `;
@@ -82,14 +66,14 @@
       }
     });
 
-    // Remove any rows that no longer exist
+    // Remove rows that no longer exist
     list.querySelectorAll('[data-id]').forEach(row => {
-      if (!leaderboard.find(e => e.id === row.dataset.id)) row.remove();
+      if (!leaderboard.find(e => String(e.id) === row.dataset.id)) row.remove();
     });
 
     // Re-sort DOM rows to match leaderboard order
     leaderboard.forEach(entry => {
-      const row = list.querySelector(`[data-id="${entry.id}"]`);
+      const row = list.querySelector(`[data-id="${String(entry.id)}"]`);
       if (row) list.appendChild(row);
     });
   }

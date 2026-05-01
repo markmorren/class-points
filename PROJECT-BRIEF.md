@@ -3,35 +3,37 @@
 A classroom behaviour points tracker for teachers. Award points in two taps, show live leaderboard on the classroom projector.
 
 **Live URL:** https://points.morren.uk *(pending setup)*
-**Stack:** Cloudflare Pages + Pages Functions + D1 (SQLite)
+**Stack:** Cloudflare Pages (static HTML only) + sql.js (local SQLite in the browser)
 **Repo:** ~/Developer/class-points/
 
 ## What it does
 
-- Teachers sign in via magic-link email (no passwords)
-- Create classes, add pupils, award individual or group points
-- Real-time leaderboard, classroom board view for the projector
-- Invite colleagues to co-teach a class
+- Load or create a local .db file on startup — all data stays on the teacher's device
+- Create classes, add pupils, award individual or group points in two taps
+- Live leaderboard; classroom board view for the projector (BroadcastChannel, same-origin)
 - CSV export of all points data
+- Save data as a timestamped .db file at any time
+
+## Architecture notes
+
+No server-side database. sql.js v1.12.0 runs SQLite in the browser via WebAssembly. The teacher manages their own .db file (download to save, upload to restore). Same pattern as SFL Tracker and iPad Dashboard.
+
+Board view (board.html) receives live leaderboard updates via `BroadcastChannel('class-points-board')` — no polling, no server required.
 
 ## Phasing
 
-- **MVP (current):** Single class, two-tap award, leaderboard, board view, CSV export
-- **Phase 2:** Multi-class, co-teach invites
-- **Phase 3:** Avatars, sounds, animations on the board view
-- **Phase 4:** Trends/reports, academic-year auto-archive
+- **MVP (current):** Single-user, multi-class, two-tap award, group award, leaderboard, board view, CSV export
+- **Phase 2:** Avatars, sounds, animations on the board view
+- **Phase 3:** Trends/reports, academic-year archive
 
 ## Key files
 
 | File | Purpose |
 |---|---|
-| `index.html` | Teacher console (SPA) |
-| `board.html` | Classroom projector view |
+| `index.html` | Teacher console (SPA) — sql.js, all data ops local |
+| `board.html` | Classroom projector view — BroadcastChannel listener |
 | `style.css` | Shared styles |
-| `functions/api/` | Pages Functions API (23 endpoints) |
-| `schema.sql` | D1 database schema |
-| `wrangler.toml` | Cloudflare config |
-| `SETUP.md` | Deployment instructions |
+| `schema.sql` | Local SQLite schema (reference) |
 
 ## Working notes
 
